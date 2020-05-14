@@ -8,8 +8,8 @@ public:
   CrossEntropy();
   CrossEntropy(const CrossEntropy& other);
 
-  virtual Eigen::VectorXd train(RewardFunc& reward, const Eigen::VectorXd& initial_candidate,
-                                std::default_random_engine* engine);
+  Eigen::VectorXd train(RewardFunc& reward, const Eigen::VectorXd& initial_candidate,
+                        std::default_random_engine* engine) override;
 
   /// Does not influence the number of generations, best_set_size is always 10% of pop_size
   virtual void setMaxCalls(int max_calls) override;
@@ -34,6 +34,13 @@ private:
 
   /// How many samples are considered for the next generation
   int best_set_size;
+
+  /// When determining the initial covariance, can be used to start with a lower covariance
+  double dev_prescaler;
+
+  /// 0 : Silent
+  /// 1+: Write the new parameters when 'setMaxCalls' is called
+  int verbosity;
 };
 
 }  // namespace rhoban_bbo

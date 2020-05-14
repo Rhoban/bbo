@@ -1,6 +1,9 @@
 #include "rhoban_bbo/cross_entropy.h"
 
 #include "rhoban_random/multivariate_gaussian.h"
+#include <rhoban_utils/util.h>
+
+#include <iostream>
 
 namespace rhoban_bbo
 {
@@ -9,12 +12,17 @@ bool candidateSort(const CrossEntropy::ScoredCandidate& c1, const CrossEntropy::
   return c1.second > c2.second;
 }
 
-CrossEntropy::CrossEntropy() : nb_generations(10), population_size(100), best_set_size(10)
+CrossEntropy::CrossEntropy()
+  : nb_generations(10), population_size(100), best_set_size(10), dev_prescaler(1.0), verbosity(0)
 {
 }
 
 CrossEntropy::CrossEntropy(const CrossEntropy& other)
-  : nb_generations(other.nb_generations), population_size(other.population_size), best_set_size(other.best_set_size)
+  : nb_generations(other.nb_generations)
+  , population_size(other.population_size)
+  , best_set_size(other.best_set_size)
+  , dev_prescaler(other.dev_prescaler)
+  , verbosity(other.verbosity)
 {
 }
 
@@ -70,7 +78,7 @@ Eigen::MatrixXd CrossEntropy::getInitialCovariance()
     double amplitude = limits(dim, 1) - limits(dim, 0);
     // In a normal distribution, 95% of the values are in:
     // [mu - 1.96 stddev, mu + 1.96 stddev]
-    double dev = amplitude / (2 * 1.96);
+    double dev = dev_prescaler * amplitude / (2 * 1.96);
     init_covar(dim, dim) = dev * dev;
   }
   return init_covar;
@@ -80,13 +88,16 @@ void CrossEntropy::setMaxCalls(int max_calls)
 {
   nb_generations = std::max((int)log2(max_calls), 2);
   population_size = (int)(max_calls / nb_generations);
-  best_set_size = std::max(2, (int)(population_size / 10));
+  best_set_size = std::max(2, (int)(population_size / 10));  // Keeping the 10% best
   if (best_set_size >= population_size)
   {
     throw std::logic_error("CrossEntropy::setMaxCalls: max_calls is too low");
   }
-  // std::cout << "CE: New population size, best_set_size: "
-  //          << population_size << ", " << best_set_size << std::endl;
+  if (verbosity >= 1)
+  {
+    std::cout << DEBUG_INFO << "{nb generations:" << nb_generations << ", population size:" << population_size
+              << ", best set size:" << best_set_size << "}" << std::endl;
+  }
 }
 
 std::string CrossEntropy::getClassName() const
@@ -100,6 +111,8 @@ Json::Value CrossEntropy::toJson() const
   v["nb_generations"] = nb_generations;
   v["population_size"] = population_size;
   v["best_set_size"] = best_set_size;
+  v["dev_prescaler"] = dev_prescaler;
+  v["verbosity"] = verbosity;
   return v;
 }
 
@@ -109,6 +122,13 @@ void CrossEntropy::fromJson(const Json::Value& v, const std::string& dir_name)
   rhoban_utils::tryRead(v, "nb_generations", &nb_generations);
   rhoban_utils::tryRead(v, "population_size", &population_size);
   rhoban_utils::tryRead(v, "best_set_size", &best_set_size);
+  rhoban_utils::tryRead(v, "dev_prescaler", &dev_prescaler);
+  rhoban_utils::tryRead(v, "verbosity", &verbosity);
+
+  if (dev_prescaler <= 0.0 || dev_prescaler > 1.0)
+  {
+    throw std::runtime_error(DEBUG_INFO + "Invalid value for dev_prescaler" + std::to_string(dev_prescaler) + " ]0,1]");
+  }
 }
 
 std::unique_ptr<Optimizer> CrossEntropy::clone() const
