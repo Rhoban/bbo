@@ -1,19 +1,7 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.16.3)
 project(rhoban_bbo)
 
-find_package(catkin REQUIRED COMPONENTS
-  rhoban_utils
-  rhoban_random
-  libcmaes
-)
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++17 -fopenmp")
-
-catkin_package(
-  INCLUDE_DIRS include
-  LIBRARIES rhoban_bbo
-  CATKIN_DEPENDS rhoban_utils rhoban_random libcmaes
-  )
 
 option(ROSBAN_BBO_BUILD_EXAMPLES OFF)
 
@@ -48,12 +36,20 @@ endforeach (DIRECTORY)
 
 # Declare the library
 add_library(rhoban_bbo ${ALL_SOURCES} )
-target_link_libraries(rhoban_bbo ${catkin_LIBRARIES})
+target_link_libraries(rhoban_bbo PUBLIC 
+  rhoban_utils
+  rhoban_random
+  cmaes
+)
+target_include_directories(rhoban_bbo PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
 
 if (ROSBAN_BBO_BUILD_EXAMPLES)
   add_executable(bbo_example examples/bbo_example.cpp)
-  target_link_libraries(bbo_example rhoban_bbo ${catkin_LIBRARIES})
+  target_link_libraries(bbo_example rhoban_bbo)
 
   add_executable(test_cmaes_limits examples/test_cmaes_limits.cpp)
-  target_link_libraries(test_cmaes_limits rhoban_bbo ${catkin_LIBRARIES})
+  target_link_libraries(test_cmaes_limits rhoban_bbo)
 endif()
