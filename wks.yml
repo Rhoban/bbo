@@ -1,6 +1,6 @@
 deps:
-  - rhoban/utils#wks
-  - rhoban/random#wks
-  - rhobandeps/libcmaes#wks
+  - rhoban/utils
+  - rhoban/random
+  - rhobandeps/libcmaes
 
 
